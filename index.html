@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Modelo Iterativo de Cambio Climático</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Inter:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg: #080d1a;
+    --surface: #0e1628;
+    --card: #111d35;
+    --border: #1e3a5f;
+    --accent: #00d4ff;
+    --accent2: #ff6b35;
+    --accent3: #39ff14;
+    --warm: #ffb347;
+    --cold: #4fc3f7;
+    --text: #e2eaf7;
+    --muted: #5a7a9e;
+    --danger: #ff4444;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  #app { position: relative; z-index: 1; }
+
+  /* ===== HEADER ===== */
+  header {
+    background: linear-gradient(135deg, #0a1628 0%, #0e2040 50%, #0a1628 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .logo-icon {
+    width: 44px; height: 44px;
+    background: linear-gradient(135deg, var(--accent), #0066ff);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    box-shadow: 0 0 20px rgba(0,212,255,0.4);
+  }
+
+  .logo h1 {
+    font-family: 'Orbitron', monospace;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .logo p {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    margin-top: 2px;
+  }
+
+  .status-bar {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+  }
+
+  .status-dot {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; color: var(--muted);
+  }
+  .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--accent3);
+    box-shadow: 0 0 6px var(--accent3);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity: 1; } 50% { opacity: 0.4; }
+  }
+
+  /* ===== MAIN LAYOUT ===== */
+  main {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    grid-template-rows: auto 1fr;
+    gap: 0;
+    height: calc(100vh - 72px);
+  }
+
+  /* ===== SIDEBAR PARAMS ===== */
+  .sidebar {
+    grid-row: 1 / 3;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .section-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 2px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 6px;
+  }
+
+  .param-group {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+  }
+
+  .param-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 12px;
+  }
+  .param-row:last-child { margin-bottom: 0; }
+
+  .param-label {
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .param-label span.symbol {
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--accent);
+    font-size: 12px;
+  }
+  .param-label span.val {
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--warm);
+    font-size: 12px;
+    min-width: 40px;
+    text-align: right;
+  }
+
+  input[type=range] {
+    width: 100%;
+    -webkit-appearance: none;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--border);
+    outline: none;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+    cursor: pointer;
+  }
+
+  input[type=number] {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    padding: 6px 10px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input[type=number]:focus { border-color: var(--accent); }
+
+  .btn-run {
+    background: linear-gradient(135deg, var(--accent) 0%, #0066ff 100%);
+    border: none;
+    border-radius: 8px;
+    color: #000;
+    font-family: 'Orbitron', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    padding: 12px;
+    width: 100%;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 20px rgba(0,212,255,0.3);
+    text-transform: uppercase;
+  }
+  .btn-run:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 24px rgba(0,212,255,0.5);
+  }
+  .btn-run:active { transform: translateY(0); }
+
+  .btn-reset {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--muted);
+    font-size: 11px;
+    padding: 8px;
+    width: 100%;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 1px;
+    font-family: 'Orbitron', monospace;
+  }
+  .btn-reset:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ===== METRICS BAR ===== */
+  .metrics-bar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 24px;
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    overflow-x: auto;
+  }
+
+  .metric-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 16px;
+    min-width: 130px;
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--accent);
+  }
+  .metric-card.warm::before { background: var(--accent2); }
+  .metric-card.cold::before { background: var(--cold); }
+  .metric-card.green::before { background: var(--accent3); }
+
+  .metric-label { font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+  .metric-value {
+    font-family: 'Orbitron', monospace;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+    margin-top: 2px;
+  }
+  .metric-sub { font-size: 10px; color: var(--muted); margin-top: 1px; }
+
+  /* ===== CONTENT AREA ===== */
+  .content {
+    overflow-y: auto;
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* ===== CHART ===== */
+  .chart-container {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    position: relative;
+  }
+
+  .chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .chart-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--accent);
+    text-transform: uppercase;
+  }
+
+  .chart-legend {
+    display: flex;
+    gap: 16px;
+  }
+  .legend-item {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; color: var(--muted);
+  }
+  .legend-dot {
+    width: 10px; height: 3px; border-radius: 2px;
+  }
+
+  canvas { width: 100% !important; }
+
+  /* ===== TABLE ===== */
+  .table-container {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .table-header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+  }
+
+  thead th {
+    background: rgba(0,212,255,0.05);
+    padding: 10px 16px;
+    text-align: left;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--accent);
+    text-transform: uppercase;
+    font-family: 'Orbitron', monospace;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+
+  tbody tr {
+    border-bottom: 1px solid rgba(30,58,95,0.5);
+    transition: background 0.1s;
+  }
+  tbody tr:hover { background: rgba(0,212,255,0.04); }
+  tbody tr.highlight { background: rgba(0,212,255,0.08); }
+
+  tbody td {
+    padding: 8px 16px;
+    color: var(--text);
+    white-space: nowrap;
+  }
+
+  .temp-cell { font-weight: 600; }
+  .temp-warm { color: var(--accent2); }
+  .temp-cold { color: var(--cold); }
+  .temp-ok   { color: var(--accent3); }
+
+  /* ===== CONCLUSIONS ===== */
+  .conclusions {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .conclusion-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 14px;
+  }
+  .conclusion-item {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--muted);
+  }
+  .conclusion-item strong { color: var(--text); display: block; margin-bottom: 4px; }
+
+  /* ===== EMPTY STATE ===== */
+  .empty-state {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 60px 20px;
+    color: var(--muted);
+    text-align: center;
+    gap: 12px;
+  }
+  .empty-state .icon { font-size: 48px; opacity: 0.3; }
+  .empty-state p { font-size: 13px; }
+
+  /* ===== SCROLLBAR ===== */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+  .btn-export {
+    background: transparent;
+    border: 1px solid var(--accent3);
+    border-radius: 6px;
+    color: var(--accent3);
+    font-size: 10px;
+    font-family: 'Orbitron', monospace;
+    letter-spacing: 1px;
+    padding: 5px 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-export:hover { background: rgba(57,255,20,0.1); }
+</style>
+</head>
+<body>
+<div id="app">
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🌍</div>
+    <div>
+      <h1>ClimaSim v1.0</h1>
+      <p>MODELO ITERATIVO DE CAMBIO CLIMÁTICO · CECyTEA</p>
+    </div>
+  </div>
+  <div class="status-bar">
+    <div class="status-dot"><div class="dot"></div> SISTEMA ACTIVO</div>
+  </div>
+</header>
+
+<main>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="section-title">Parámetros Iniciales</div>
+
+    <div class="param-group">
+      <div class="param-row">
+        <div class="param-label">
+          <span>Temperatura inicial <span class="symbol">T₀</span></span>
+          <span class="val" id="v_T0">23</span>
+        </div>
+        <input type="range" id="T0" min="-20" max="50" step="0.5" value="23"
+          oninput="document.getElementById('v_T0').textContent=parseFloat(this.value).toFixed(1)">
+      </div>
+      <div class="param-row">
+        <div class="param-label">
+          <span>Emisiones CO₂ <span class="symbol">E₀</span></span>
+          <span class="val" id="v_E0">15</span>
+        </div>
+        <input type="range" id="E0" min="1" max="50" step="1" value="15"
+          oninput="document.getElementById('v_E0').textContent=this.value">
+      </div>
+      <div class="param-row">
+        <div class="param-label">
+          <span>Unidades forestales <span class="symbol">F₀</span></span>
+          <span class="val" id="v_F0">10</span>
+        </div>
+        <input type="range" id="F0" min="0" max="50" step="1" value="10"
+          oninput="document.getElementById('v_F0').textContent=this.value">
+      </div>
+      <div class="param-row" style="margin-bottom:0">
+        <div class="param-label">
+          <span>Retroalimentación <span class="symbol">R₀</span></span>
+          <span class="val" id="v_R0">0.70</span>
+        </div>
+        <input type="range" id="R0" min="-1" max="1" step="0.05" value="0.7"
+          oninput="document.getElementById('v_R0').textContent=parseFloat(this.value).toFixed(2)">
+      </div>
+    </div>
+
+    <div class="section-title">Coeficientes del Modelo</div>
+
+    <div class="param-group">
+      <div class="param-row">
+        <div class="param-label">
+          <span>Alpha <span class="symbol">α</span> — CO₂</span>
+          <span class="val" id="v_alpha">0.20</span>
+        </div>
+        <input type="range" id="alpha" min="0.01" max="1" step="0.01" value="0.2"
+          oninput="document.getElementById('v_alpha').textContent=parseFloat(this.value).toFixed(2)">
+      </div>
+      <div class="param-row">
+        <div class="param-label">
+          <span>Beta <span class="symbol">β</span> — Forestal</span>
+          <span class="val" id="v_beta">0.30</span>
+        </div>
+        <input type="range" id="beta" min="0.01" max="1" step="0.01" value="0.3"
+          oninput="document.getElementById('v_beta').textContent=parseFloat(this.value).toFixed(2)">
+      </div>
+      <div class="param-row" style="margin-bottom:0">
+        <div class="param-label">
+          <span>Gamma <span class="symbol">γ</span> — Retroal.</span>
+          <span class="val" id="v_gamma">0.20</span>
+        </div>
+        <input type="range" id="gamma" min="0.01" max="1" step="0.01" value="0.2"
+          oninput="document.getElementById('v_gamma').textContent=parseFloat(this.value).toFixed(2)">
+      </div>
+    </div>
+
+    <div class="section-title">Configuración</div>
+
+    <div class="param-group">
+      <div class="param-row">
+        <div class="param-label">
+          <span>Iteraciones</span>
+          <span class="val" id="v_iter">15</span>
+        </div>
+        <input type="range" id="iters" min="10" max="50" step="1" value="15"
+          oninput="document.getElementById('v_iter').textContent=this.value">
+      </div>
+      <div class="param-row" style="margin-bottom:0">
+        <div class="param-label"><span>Δ Emisiones por paso</span><span class="val" id="v_dE">+1</span></div>
+        <input type="range" id="dE" min="-5" max="10" step="0.5" value="1"
+          oninput="document.getElementById('v_dE').textContent=(this.value>0?'+':'')+parseFloat(this.value).toFixed(1)">
+      </div>
+    </div>
+
+    <button class="btn-run" onclick="runSimulation()">▶ EJECUTAR SIMULACIÓN</button>
+    <button class="btn-reset" onclick="resetDefaults()">↺ RESTABLECER</button>
+
+    <div style="margin-top:auto; padding-top:10px; font-size:10px; color:var(--muted); line-height:1.6; text-align:center;">
+      <strong style="color:var(--accent); font-family:'Orbitron',monospace;">ECUACIÓN</strong><br>
+      T<sub>n+1</sub> = T<sub>n</sub> + α·E<sub>n</sub> − β·F<sub>n</sub> + γ·R<sub>n</sub>
+    </div>
+  </aside>
+
+  <!-- METRICS BAR -->
+  <div class="metrics-bar">
+    <div class="metric-card">
+      <div class="metric-label">Temp. Inicial</div>
+      <div class="metric-value" id="m_t0">—</div>
+      <div class="metric-sub">°C</div>
+    </div>
+    <div class="metric-card warm">
+      <div class="metric-label">Temp. Final</div>
+      <div class="metric-value" id="m_tf">—</div>
+      <div class="metric-sub">°C</div>
+    </div>
+    <div class="metric-card cold">
+      <div class="metric-label">Variación Total</div>
+      <div class="metric-value" id="m_delta">—</div>
+      <div class="metric-sub">°C</div>
+    </div>
+    <div class="metric-card green">
+      <div class="metric-label">Iteraciones</div>
+      <div class="metric-value" id="m_iters">—</div>
+      <div class="metric-sub">pasos</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">T. Mínima</div>
+      <div class="metric-value" id="m_tmin">—</div>
+      <div class="metric-sub">°C</div>
+    </div>
+    <div class="metric-card warm">
+      <div class="metric-label">T. Máxima</div>
+      <div class="metric-value" id="m_tmax">—</div>
+      <div class="metric-sub">°C</div>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+    <div id="empty-state" class="empty-state">
+      <div class="icon">🌡️</div>
+      <p style="font-family:'Orbitron',monospace;color:var(--accent);font-size:13px;">SIMULACIÓN NO INICIADA</p>
+      <p>Configura los parámetros y presiona <strong>Ejecutar Simulación</strong></p>
+    </div>
+
+    <div id="chart-section" style="display:none">
+      <div class="chart-container">
+        <div class="chart-header">
+          <div class="chart-title">Evolución de Variables — Iteraciones</div>
+          <div class="chart-legend">
+            <div class="legend-item"><div class="legend-dot" style="background:#00d4ff"></div> Temperatura (°C)</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#ff6b35"></div> CO₂ (u)</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#39ff14"></div> Forestal (u)</div>
+          </div>
+        </div>
+        <canvas id="mainChart" height="260"></canvas>
+      </div>
+
+      <div class="chart-container">
+        <div class="chart-header">
+          <div class="chart-title">Retroalimentación del Sistema</div>
+        </div>
+        <canvas id="retroChart" height="140"></canvas>
+      </div>
+
+      <div class="table-container">
+        <div class="table-header">
+          <div class="chart-title">Registro de Iteraciones</div>
+          <button class="btn-export" onclick="exportCSV()">⬇ EXPORTAR CSV</button>
+        </div>
+        <div style="overflow-x:auto; max-height:320px; overflow-y:auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Paso n</th>
+                <th>Tₙ (°C)</th>
+                <th>Eₙ CO₂</th>
+                <th>Fₙ Forestal</th>
+                <th>Rₙ Retro.</th>
+                <th>α·Eₙ</th>
+                <th>β·Fₙ</th>
+                <th>γ·Rₙ</th>
+                <th>ΔT</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="conclusions">
+        <div class="section-title">Conclusiones del Modelo</div>
+        <div class="conclusion-grid" id="conclusionGrid"></div>
+      </div>
+    </div>
+  </div>
+
+</main>
+</div>
+
+<script>
+// ===== CHART.JS CDN-FREE (inline minimal canvas renderer) =====
+// We'll draw charts manually on canvas since no CDN access
+
+let simData = null;
+
+function getParams() {
+  return {
+    T0: parseFloat(document.getElementById('T0').value),
+    E0: parseFloat(document.getElementById('E0').value),
+    F0: parseFloat(document.getElementById('F0').value),
+    R0: parseFloat(document.getElementById('R0').value),
+    alpha: parseFloat(document.getElementById('alpha').value),
+    beta: parseFloat(document.getElementById('beta').value),
+    gamma: parseFloat(document.getElementById('gamma').value),
+    iters: parseInt(document.getElementById('iters').value),
+    dE: parseFloat(document.getElementById('dE').value)
+  };
+}
+
+function runSimulation() {
+  const p = getParams();
+  const data = [];
+
+  let T = p.T0, E = p.E0, F = p.F0, R = p.R0;
+
+  for (let n = 0; n <= p.iters; n++) {
+    const aE = p.alpha * E;
+    const bF = p.beta * F;
+    const gR = p.gamma * R;
+    const deltaT = n === 0 ? 0 : aE - bF + gR;
+
+    data.push({ n, T: parseFloat(T.toFixed(2)), E: parseFloat(E.toFixed(2)),
+      F: parseFloat(F.toFixed(2)), R: parseFloat(R.toFixed(2)),
+      aE: parseFloat(aE.toFixed(3)), bF: parseFloat(bF.toFixed(3)),
+      gR: parseFloat(gR.toFixed(3)), deltaT: parseFloat(deltaT.toFixed(3)) });
+
+    if (n < p.iters) {
+      const newT = T + p.alpha * E - p.beta * F + p.gamma * R;
+      E += p.dE;
+      F += 2;
+      R -= 0.05;
+      T = newT;
+    }
+  }
+
+  simData = { data, params: p };
+
+  updateMetrics(data);
+  renderTable(data);
+  renderChart(data, p);
+  renderRetroChart(data, p);
+  renderConclusions(data, p);
+
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('chart-section').style.display = 'block';
+}
+
+function updateMetrics(data) {
+  const temps = data.map(d => d.T);
+  const t0 = temps[0], tf = temps[temps.length-1];
+  const delta = tf - t0;
+  document.getElementById('m_t0').textContent = t0.toFixed(1);
+  document.getElementById('m_tf').textContent = tf.toFixed(1);
+  document.getElementById('m_delta').textContent = (delta >= 0 ? '+' : '') + delta.toFixed(1);
+  document.getElementById('m_iters').textContent = data.length - 1;
+  document.getElementById('m_tmin').textContent = Math.min(...temps).toFixed(1);
+  document.getElementById('m_tmax').textContent = Math.max(...temps).toFixed(1);
+}
+
+function renderTable(data) {
+  const body = document.getElementById('tableBody');
+  body.innerHTML = '';
+  data.forEach(row => {
+    const tr = document.createElement('tr');
+    if (row.n === 0 || row.n === data.length - 1) tr.className = 'highlight';
+
+    let tClass = 'temp-ok';
+    if (row.T > 30) tClass = 'temp-warm';
+    else if (row.T < 0) tClass = 'temp-cold';
+
+    tr.innerHTML = `
+      <td>${row.n}</td>
+      <td class="temp-cell ${tClass}">${row.T.toFixed(2)}</td>
+      <td>${row.E.toFixed(1)}</td>
+      <td>${row.F.toFixed(1)}</td>
+      <td>${row.R.toFixed(2)}</td>
+      <td style="color:#ff6b35">${row.aE.toFixed(3)}</td>
+      <td style="color:#39ff14">${row.bF.toFixed(3)}</td>
+      <td style="color:#4fc3f7">${row.gR.toFixed(3)}</td>
+      <td style="color:${row.deltaT > 0 ? '#ff6b35' : '#4fc3f7'}">${row.n === 0 ? '—' : (row.deltaT >= 0 ? '+' : '') + row.deltaT.toFixed(3)}</td>
+    `;
+    body.appendChild(tr);
+  });
+}
+
+// ===== CANVAS CHART RENDERER =====
+function renderChart(data, p) {
+  const canvas = document.getElementById('mainChart');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.parentElement.getBoundingClientRect();
+  const W = rect.width - 40, H = 260;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const pad = { top: 20, right: 20, bottom: 40, left: 55 };
+  const cW = W - pad.left - pad.right;
+  const cH = H - pad.top - pad.bottom;
+
+  const temps = data.map(d => d.T);
+  const ems   = data.map(d => d.E);
+  const fors  = data.map(d => d.F);
+  const all   = [...temps, ...ems, ...fors];
+  const minV = Math.min(...all) - 2;
+  const maxV = Math.max(...all) + 2;
+  const ns    = data.map(d => d.n);
+
+  function xp(n) { return pad.left + (n / (data.length - 1)) * cW; }
+  function yp(v) { return pad.top + cH - ((v - minV) / (maxV - minV)) * cH; }
+
+  // BG
+  ctx.fillStyle = '#0e1628';
+  ctx.fillRect(0, 0, W, H);
+
+  // Grid
+  ctx.strokeStyle = 'rgba(30,58,95,0.6)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 5; i++) {
+    const y = pad.top + (cH / 5) * i;
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
+    const val = maxV - ((maxV - minV) / 5) * i;
+    ctx.fillStyle = '#5a7a9e';
+    ctx.font = '10px Share Tech Mono';
+    ctx.textAlign = 'right';
+    ctx.fillText(val.toFixed(0), pad.left - 6, y + 4);
+  }
+
+  for (let i = 0; i < data.length; i++) {
+    const x = xp(data[i].n);
+    ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, H - pad.bottom); ctx.stroke();
+    if (i % Math.ceil(data.length / 10) === 0 || i === data.length - 1) {
+      ctx.fillStyle = '#5a7a9e';
+      ctx.font = '10px Share Tech Mono';
+      ctx.textAlign = 'center';
+      ctx.fillText(data[i].n, x, H - pad.bottom + 14);
+    }
+  }
+
+  function drawLine(arr, color, glow) {
+    // Glow effect
+    ctx.save();
+    ctx.shadowColor = color;
+    ctx.shadowBlur = glow ? 10 : 0;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = glow ? 2.5 : 1.5;
+    ctx.setLineDash(glow ? [] : [6,3]);
+    ctx.beginPath();
+    arr.forEach((v, i) => {
+      const x = xp(data[i].n), y = yp(v);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+    ctx.restore();
+
+    if (glow) {
+      ctx.fillStyle = color;
+      arr.forEach((v, i) => {
+        const x = xp(data[i].n), y = yp(v);
+        ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill();
+      });
+    }
+  }
+
+  drawLine(fors,  '#39ff14', false);
+  drawLine(ems,   '#ff6b35', false);
+  drawLine(temps, '#00d4ff', true);
+
+  // Axis labels
+  ctx.fillStyle = '#5a7a9e';
+  ctx.font = '10px Orbitron';
+  ctx.textAlign = 'center';
+  ctx.fillText('ITERACIÓN (n)', W / 2, H - 2);
+  ctx.save(); ctx.translate(12, H / 2); ctx.rotate(-Math.PI / 2);
+  ctx.fillText('VALOR', 0, 0);
+  ctx.restore();
+}
+
+function renderRetroChart(data, p) {
+  const canvas = document.getElementById('retroChart');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.parentElement.getBoundingClientRect();
+  const W = rect.width - 40, H = 140;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const pad = { top: 15, right: 20, bottom: 35, left: 55 };
+  const cW = W - pad.left - pad.right;
+  const cH = H - pad.top - pad.bottom;
+
+  const retros = data.map(d => d.R);
+  const minV = Math.min(...retros) - 0.1;
+  const maxV = Math.max(...retros) + 0.1;
+
+  function xp(n) { return pad.left + (n / (data.length - 1)) * cW; }
+  function yp(v) { return pad.top + cH - ((v - minV) / (maxV - minV)) * cH; }
+
+  ctx.fillStyle = '#0e1628'; ctx.fillRect(0, 0, W, H);
+
+  // Zero line
+  const zero_y = yp(0);
+  if (zero_y > pad.top && zero_y < H - pad.bottom) {
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 1;
+    ctx.setLineDash([4,4]);
+    ctx.beginPath(); ctx.moveTo(pad.left, zero_y); ctx.lineTo(W - pad.right, zero_y); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#5a7a9e'; ctx.font = '9px Share Tech Mono'; ctx.textAlign = 'right';
+    ctx.fillText('0', pad.left - 6, zero_y + 3);
+  }
+
+  // Grid + axis
+  ctx.strokeStyle = 'rgba(30,58,95,0.6)'; ctx.lineWidth = 1;
+  [0,1].forEach(i => {
+    const v = maxV - (maxV - minV) * i;
+    const y = pad.top + cH * i;
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
+    ctx.fillStyle = '#5a7a9e'; ctx.font = '10px Share Tech Mono'; ctx.textAlign = 'right';
+    ctx.fillText(v.toFixed(2), pad.left - 6, y + 4);
+  });
+
+  // Area fill
+  const grad = ctx.createLinearGradient(0, pad.top, 0, H - pad.bottom);
+  grad.addColorStop(0, 'rgba(75,99,210,0.3)');
+  grad.addColorStop(1, 'rgba(75,99,210,0)');
+  ctx.beginPath();
+  retros.forEach((v, i) => {
+    const x = xp(data[i].n), y = yp(v);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.lineTo(xp(data[data.length-1].n), yp(minV));
+  ctx.lineTo(xp(0), yp(minV));
+  ctx.closePath();
+  ctx.fillStyle = grad; ctx.fill();
+
+  // Line
+  ctx.save(); ctx.shadowColor = '#8080ff'; ctx.shadowBlur = 8;
+  ctx.strokeStyle = '#8080ff'; ctx.lineWidth = 2; ctx.setLineDash([]);
+  ctx.beginPath();
+  retros.forEach((v, i) => {
+    const x = xp(data[i].n), y = yp(v);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke(); ctx.restore();
+
+  // X labels
+  ctx.fillStyle = '#5a7a9e'; ctx.font = '10px Share Tech Mono'; ctx.textAlign = 'center';
+  data.forEach((d, i) => {
+    if (i % Math.ceil(data.length / 10) === 0 || i === data.length - 1)
+      ctx.fillText(d.n, xp(d.n), H - pad.bottom + 14);
+  });
+
+  // Title
+  ctx.fillStyle = '#8080ff'; ctx.font = '10px Orbitron'; ctx.textAlign = 'left';
+  ctx.fillText('RETROALIMENTACIÓN Rₙ', pad.left, pad.top - 2);
+}
+
+function renderConclusions(data, p) {
+  const temps = data.map(d => d.T);
+  const t0 = temps[0], tf = temps[temps.length - 1];
+  const delta = tf - t0;
+  const trend = delta > 2 ? 'calentamiento' : delta < -2 ? 'enfriamiento' : 'estabilización';
+  const trendColor = delta > 2 ? '#ff6b35' : delta < -2 ? '#4fc3f7' : '#39ff14';
+
+  const grid = document.getElementById('conclusionGrid');
+  grid.innerHTML = `
+    <div class="conclusion-item">
+      <strong style="color:${trendColor}">📈 Tendencia: ${trend.toUpperCase()}</strong>
+      La temperatura varió de <b>${t0}°C</b> a <b>${tf.toFixed(2)}°C</b>,
+      una diferencia de <b>${delta.toFixed(2)}°C</b> en ${data.length - 1} iteraciones.
+    </div>
+    <div class="conclusion-item">
+      <strong style="color:#ff6b35">🏭 Impacto del CO₂</strong>
+      Con α = ${p.alpha}, cada unidad de CO₂ aporta <b>+${p.alpha}°C</b> por paso.
+      Las emisiones ${p.dE >= 0 ? 'aumentaron' : 'disminuyeron'} ${Math.abs(p.dE)} u/paso,
+      ${p.dE >= 0 ? 'acelerando' : 'desacelerando'} el cambio térmico.
+    </div>
+    <div class="conclusion-item">
+      <strong style="color:#39ff14">🌳 Efecto Forestal</strong>
+      Con β = ${p.beta}, cada unidad forestal captura <b>-${p.beta}°C</b> por paso.
+      El aumento de cobertura vegetal actúa como sumidero de carbono,
+      mitigando el calentamiento.
+    </div>
+    <div class="conclusion-item">
+      <strong style="color:#8080ff">🔄 Retroalimentación</strong>
+      El factor R₀ = ${p.R0} inicia ${p.R0 > 0 ? 'positivo (amplifica)' : 'negativo (amortigua)'}.
+      Al disminuir 0.05/paso, el sistema tiende a ${p.R0 > 0 ? 'estabilizarse eventualmente' : 'amplificar el enfriamiento'}.
+      Este mecanismo es clave en el cambio climático real.
+    </div>
+  `;
+}
+
+function exportCSV() {
+  if (!simData) return;
+  const rows = ['n,T(°C),E CO2,F Forestal,R Retroalim,alpha*E,beta*F,gamma*R,DeltaT'];
+  simData.data.forEach(d => {
+    rows.push(`${d.n},${d.T},${d.E},${d.F},${d.R},${d.aE},${d.bF},${d.gR},${d.n === 0 ? 0 : d.deltaT}`);
+  });
+  const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'simulacion_cambio_climatico.csv';
+  a.click();
+}
+
+function resetDefaults() {
+  const defaults = { T0: 23, E0: 15, F0: 10, R0: 0.7, alpha: 0.2, beta: 0.3, gamma: 0.2, iters: 15, dE: 1 };
+  Object.entries(defaults).forEach(([k, v]) => {
+    const el = document.getElementById(k);
+    if (el) el.value = v;
+  });
+  document.getElementById('v_T0').textContent = '23.0';
+  document.getElementById('v_E0').textContent = '15';
+  document.getElementById('v_F0').textContent = '10';
+  document.getElementById('v_R0').textContent = '0.70';
+  document.getElementById('v_alpha').textContent = '0.20';
+  document.getElementById('v_beta').textContent = '0.30';
+  document.getElementById('v_gamma').textContent = '0.20';
+  document.getElementById('v_iter').textContent = '15';
+  document.getElementById('v_dE').textContent = '+1.0';
+}
+
+// Run on load with defaults
+window.addEventListener('load', () => setTimeout(runSimulation, 100));
+window.addEventListener('resize', () => { if (simData) { renderChart(simData.data, simData.params); renderRetroChart(simData.data, simData.params); } });
+</script>
+</body>
+</html>

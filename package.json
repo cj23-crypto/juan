@@ -1,0 +1,23 @@
+{
+  "name": "modelo-cambio-climatico",
+  "version": "1.0.0",
+  "description": "Modelo Iterativo de Cambio Climático",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win --x64"
+  },
+  "build": {
+    "appId": "com.cecytea.climamodel",
+    "productName": "Modelo Cambio Climático",
+    "win": {
+      "target": "portable",
+      "icon": "icon.ico"
+    },
+    "files": ["**/*", "!node_modules/.cache"]
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
+  }
+}
